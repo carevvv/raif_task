@@ -1,0 +1,13 @@
+Receipt JSON:
+{receipt_json}
+
+Classification:
+{classification_json}
+
+Generate a formal email to the accounting department in Russian.
+
+Return JSON:
+{{
+  "subject": "...",
+  "body": "..."
+}}

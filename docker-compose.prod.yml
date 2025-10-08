@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: checko-backend
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - WEBAPP_URL=${WEBAPP_URL}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-mistralai/mistral-7b-instruct}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
+      - DATABASE_URL=sqlite:///./checko.db
+      - SECRET_TOKEN=${SECRET_TOKEN}
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/checko.db:/app/checko.db
+    restart: unless-stopped
+    networks:
+      - checko-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: checko-frontend
+    environment:
+      - VITE_API_URL=https://${DOMAIN}/api
+    restart: unless-stopped
+    networks:
+      - checko-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: checko-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+    networks:
+      - checko-network
+
+  bot:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: checko-bot
+    command: python -m app.telebot
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - WEBAPP_URL=${WEBAPP_URL}
+    restart: unless-stopped
+    networks:
+      - checko-network
+
+networks:
+  checko-network:
+    driver: bridge
+
+volumes:
+  uploads:
+  database:

@@ -1,0 +1,17 @@
+Raw OCR text:
+"""
+{raw_text}
+"""
+
+Return JSON with these fields:
+{{
+  "vendor": string | null,
+  "date": "YYYY-MM-DD" | null,
+  "total": float | null,
+  "currency": string | null,
+  "items": [{{"name": string|null, "qty": float|null, "price": float|null}}] | [],
+  "tax_id": string|null,
+  "payment_method": string|null,
+  "raw_confidence": "low|medium|high",
+  "notes": string|null
+}}

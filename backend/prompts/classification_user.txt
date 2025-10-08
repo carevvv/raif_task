@@ -1,0 +1,10 @@
+Receipt JSON:
+{receipt_json}
+
+Return JSON:
+{{
+  "category": "командировочные|канцтовары|ремонт|медицинские|образование|прочее",
+  "tax_deduction_possible": "yes|no|maybe",
+  "reasoning_short": "2-3 sentence explanation in Russian (why yes/no/maybe)",
+  "required_documents": ["list of required supporting docs"]
+}}
