@@ -33,4 +33,4 @@ structlog==24.1.0
 tenacity==8.2.3
 pytest==7.4.4
 pytest-asyncio==0.23.3
-httpx==0.26.0
+httpx~=0.25.2
