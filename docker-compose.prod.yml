@@ -14,7 +14,7 @@ services:
       - SECRET_TOKEN=${SECRET_TOKEN}
     volumes:
       - ./backend/uploads:/app/uploads
-      - ./backend/checko.db:/app/checko.db
+      - checko-db:/app
     restart: unless-stopped
     networks:
       - checko-network
@@ -64,5 +64,4 @@ networks:
     driver: bridge
 
 volumes:
-  uploads:
-  database:
+  checko-db:

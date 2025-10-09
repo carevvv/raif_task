@@ -63,11 +63,31 @@ export function Upload() {
 
     try {
       const result = await uploadReceipt(file)
-      // Navigate to receipt detail page
-      navigate(`/receipt/${result.id}`)
+      
+      // Show success notification using Telegram WebApp API
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.showAlert(
+          'Чек успешно загружен! 🎉\n\nОбработка может занять до 30 секунд. Вы будете перенаправлены на страницу с результатами.',
+          () => {
+            // Navigate after user closes the alert
+            navigate(`/receipt/${result.id}`)
+          }
+        )
+        // Haptic feedback
+        window.Telegram.WebApp.HapticFeedback?.notificationOccurred('success')
+      } else {
+        // Fallback for non-Telegram environment
+        alert('Чек успешно загружен! Обработка может занять до 30 секунд.')
+        navigate(`/receipt/${result.id}`)
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Ошибка загрузки файла')
       setUploading(false)
+      
+      // Haptic feedback for error
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.HapticFeedback?.notificationOccurred('error')
+      }
     }
   }
 

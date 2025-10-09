@@ -21,6 +21,16 @@ export function ReceiptDetail() {
     return () => clearInterval(interval)
   }, [id])
 
+  // Show notification when processing is complete
+  useEffect(() => {
+    if (receipt && receipt.processed && !receipt.processing_error) {
+      // Show success notification once
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.HapticFeedback?.notificationOccurred('success')
+      }
+    }
+  }, [receipt?.processed])
+
   const loadReceipt = async () => {
     try {
       const data = await getReceipt(Number(id))

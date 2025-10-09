@@ -1,49 +1,65 @@
-# 🧾 Checko - Простая обработка чеков с AI
+# 🧾 Checko - Обработка чеков с AI
 
-Демо-система для распознавания и обработки чеков через Telegram Mini App.
+Telegram Mini App для автоматического распознавания и обработки чеков.
 
-## Что это?
+## ✨ Возможности
 
-**Checko** - это простой инструмент который:
-- 📸 Распознаёт текст с фото чеков (OCR)
-- 🤖 Извлекает данные через AI (OpenRouter)
-- 📁 Классифицирует расходы
-- ✉️ Генерирует письма в бухгалтерию
-- 🔍 Ищет чеки по смыслу
+- 📸 **Распознавание чеков** - Tesseract OCR с поддержкой русского и английского языков
+- 🤖 **AI обработка** - Автоматическое извлечение данных через OpenRouter API
+- 📊 **Категоризация расходов** - Классификация чеков по типам
+- 💰 **Налоговые вычеты** - Проверка возможности получения вычета
+- ✉️ **Генерация писем** - Готовые шаблоны для бухгалтерии
+- 📱 **Telegram Mini App** - Удобный интерфейс прямо в мессенджере
 
-## Быстрый старт (3 минуты)
+## 🚀 Быстрый старт
 
-### Что нужно:
-1. Docker и Docker Compose
-2. Telegram Bot Token ([получить](https://t.me/BotFather))
-3. OpenRouter API Key ([получить](https://openrouter.ai/keys))
+### Требования:
+- Docker и Docker Compose
+- Telegram Bot Token ([получить у @BotFather](https://t.me/BotFather))
+- OpenRouter API Key ([получить](https://openrouter.ai/keys))
+- ngrok для локального тестирования ([скачать](https://ngrok.com/download))
 
-### Запуск:
+### Локальный запуск (для тестирования):
 
 ```bash
-# 1. Клонировать
+# 1. Клонировать проект
 git clone <your-repo>
 cd raif_task
 
-# 2. Настроить
+# 2. Создать .env файл
 cp .env.example .env
-nano .env  # Добавить TELEGRAM_BOT_TOKEN и OPENROUTER_API_KEY
 
-# 3. Запустить
-docker-compose up --build
+# 3. Заполнить .env:
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+OPENROUTER_API_KEY=your_openrouter_key_here
+WEBAPP_URL=https://your-ngrok-url.ngrok-free.app  # Обновим позже
 
-# ✅ Готово!
-# Backend: http://localhost:8000
-# Frontend: http://localhost:3000
+# 4. Запустить Docker
+docker-compose up -d
+
+# 5. Запустить ngrok (в отдельном терминале)
+ngrok http 3000
+
+# 6. Скопировать HTTPS URL из ngrok и обновить в .env:
+WEBAPP_URL=https://abc-123-xyz.ngrok-free.app
+
+# 7. Перезапустить backend
+docker-compose restart backend
+
+# 8. Запустить бота (в отдельном терминале)
+cd backend
+python -m app.telebot
 ```
 
-### Как пользоваться:
+### Использование:
 
-1. Открыть Telegram → найти своего бота
-2. Отправить `/open`
-3. Нажать кнопку "Открыть Checko"
-4. Загрузить фото чека
-5. Дождаться обработки
+1. Открыть Telegram и найти своего бота
+2. Отправить `/start` - появятся кнопки:
+   - 📱 **Открыть Checko** - запустить Mini App
+   - 💬 **Написать в поддержку** - связаться с разработчиком
+3. Загрузить фото чека
+4. Получить уведомление об успешной загрузке
+5. Дождаться обработки (~30 секунд)
 6. Посмотреть результаты
 
 ## Структура
@@ -69,15 +85,55 @@ raif_task/
 
 Документация: http://localhost:8000/docs
 
-## Production Deploy
+## 🌐 Production Deploy
+
+### Подготовка:
+1. **VPS сервер** - Ubuntu 22.04, минимум 2GB RAM
+2. **Домен** - для HTTPS (требуется для Mini App)
+3. **DNS настройка** - A-запись домена на IP сервера
+
+### Деплой на VPS:
 
 ```bash
-# На Ubuntu VPS:
-./deploy/setup.sh
+# 1. На сервере установить Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# 2. Клонировать проект
+git clone <your-repo>
+cd raif_task
+
+# 3. Настроить .env для продакшена
 cp .env.example .env
-nano .env  # Настроить
-./deploy/ssl_setup.sh yourdomain.com
-docker-compose -f docker-compose.prod.yml up -d
+nano .env
+
+# Важно! WEBAPP_URL должен быть вашим доменом:
+TELEGRAM_BOT_TOKEN=...
+OPENROUTER_API_KEY=...
+WEBAPP_URL=https://yourdomain.com
+SECRET_TOKEN=... # Случайная строка для безопасности
+
+# 4. Запустить в production режиме
+docker-compose -f docker-compose.prod.yml up -d --build
+
+# 5. Настроить SSL с Certbot
+sudo apt install certbot python3-certbot-nginx -y
+sudo certbot --nginx -d yourdomain.com
+
+# ✅ Готово! Бот автоматически запустится в контейнере
+```
+
+### Проверка работы:
+
+```bash
+# Проверить статус контейнеров
+docker-compose -f docker-compose.prod.yml ps
+
+# Посмотреть логи
+docker-compose -f docker-compose.prod.yml logs -f
+
+# Перезапустить сервисы
+docker-compose -f docker-compose.prod.yml restart
 ```
 
 ## Переменные окружения
@@ -90,28 +146,73 @@ OPENROUTER_MODEL=mistralai/mistral-7b-instruct
 SECRET_TOKEN=...                # Случайная строка
 ```
 
-## Troubleshooting
+## 🛠️ Troubleshooting
+
+### Общие проблемы:
+
+**OCR не распознает русский текст:**
+- ✅ Уже исправлено! Используется Tesseract с режимом `--psm 3 --oem 1`
+- Поддерживает русский и английский одновременно (`rus+eng`)
+
+**Чек "зависает" в обработке:**
+- ✅ Исправлено! Embedding теперь опционален
+- Основная обработка (OCR + LLM) всегда завершается
+
+**Mini App не открывается:**
+- Проверь, что `WEBAPP_URL` в `.env` использует HTTPS
+- Для локального тестирования обязателен ngrok
+
+### Полезные команды:
 
 ```bash
-# Логи
-docker-compose logs -f
+# Посмотреть логи
+docker-compose logs backend -f
+docker-compose logs frontend -f
 
-# Перезапуск
-docker-compose restart
+# Перезапустить сервисы
+docker-compose restart backend
+docker-compose restart frontend
 
-# Полная очистка
+# Полная очистка (удалит все данные!)
+docker-compose down -v
+docker-compose up --build -d
+
+# Остановить все процессы
 docker-compose down
-rm backend/checko.db
-docker-compose up --build
+Get-Process python,ngrok -ErrorAction SilentlyContinue | Stop-Process -Force
 ```
 
-## Технологии
+## 🔧 Технологии
 
-- **Backend**: Python 3.11, FastAPI, Tesseract OCR
-- **Frontend**: React 18, TypeScript, Tailwind CSS
-- **AI**: OpenRouter API
-- **Embeddings**: sentence-transformers (локально)
-- **DB**: SQLite
-- **Deploy**: Docker, Nginx
+### Backend:
+- **Python 3.11** + **FastAPI** - быстрый и современный API
+- **Tesseract OCR** - распознавание текста (режим PSM 3, OEM 1 для русского)
+- **OpenRouter API** - LLM обработка (Mistral 7B по умолчанию)
+- **sentence-transformers** - локальные embeddings (опционально)
+- **SQLite** - простая и надежная БД
+- **python-telegram-bot** - интеграция с Telegram
 
-## Лицензия - MIT
+### Frontend:
+- **React 18** + **TypeScript** - типобезопасный UI
+- **Vite** - быстрая сборка
+- **Tailwind CSS** - современные стили
+- **Telegram WebApp API** - нативная интеграция с Mini App
+
+### DevOps:
+- **Docker** + **Docker Compose** - контейнеризация
+- **Nginx** - production web-сервер
+- **Certbot** - автоматический SSL
+
+## 📝 Что нового
+
+**v1.0.0 - Основной функционал:**
+- ✅ Улучшенное распознавание русского текста (OCR PSM 3)
+- ✅ Уведомления при загрузке чеков в Mini App
+- ✅ Кнопки в /start (открыть Mini App + поддержка)
+- ✅ Опциональный embedding (не блокирует обработку)
+- ✅ Haptic feedback для Telegram
+- ✅ Поддержка AVIF формата изображений
+
+## 📄 Лицензия
+
+MIT License - используйте свободно!

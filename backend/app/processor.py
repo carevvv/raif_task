@@ -4,6 +4,15 @@ Receipt processing pipeline: OCR -> LLM parsing -> Classification.
 import os
 import json
 from pathlib import Path
+
+# Register AVIF/HEIF support BEFORE importing PIL
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+    pillow_heif.register_avif_opener()
+except ImportError:
+    pass
+
 from PIL import Image
 import pytesseract
 from pdf2image import convert_from_path
@@ -60,10 +69,13 @@ class ReceiptProcessor:
             image = image.convert('RGB')
         
         # Extract text with Tesseract
+        # PSM 3 = fully automatic page segmentation (best for receipts)
+        # OEM 1 = LSTM neural net mode (better for Russian)
+        # preserve_interword_spaces = better spacing for Russian text
         text = pytesseract.image_to_string(
             image, 
             lang=self.ocr_languages,
-            config='--psm 6'  # Assume uniform block of text
+            config='--psm 3 --oem 1 -c preserve_interword_spaces=1'
         )
         
         logger.info("OCR completed", text_length=len(text))
@@ -80,7 +92,7 @@ class ReceiptProcessor:
             text = pytesseract.image_to_string(
                 image,
                 lang=self.ocr_languages,
-                config='--psm 6'
+                config='--psm 3 --oem 1 -c preserve_interword_spaces=1'
             )
             texts.append(text)
         
@@ -107,15 +119,8 @@ class ReceiptProcessor:
         try:
             response = llm.call(system_prompt, user_prompt)
             
-            # Clean response (remove markdown code blocks if present)
-            response = response.strip()
-            if response.startswith("```json"):
-                response = response[7:]
-            if response.startswith("```"):
-                response = response[3:]
-            if response.endswith("```"):
-                response = response[:-3]
-            response = response.strip()
+            # Clean response (remove various wrappers)
+            response = self._clean_llm_response(response)
             
             # Parse JSON
             data = json.loads(response)
@@ -151,14 +156,7 @@ class ReceiptProcessor:
             response = llm.call(system_prompt, user_prompt)
             
             # Clean response
-            response = response.strip()
-            if response.startswith("```json"):
-                response = response[7:]
-            if response.startswith("```"):
-                response = response[3:]
-            if response.endswith("```"):
-                response = response[:-3]
-            response = response.strip()
+            response = self._clean_llm_response(response)
             
             data = json.loads(response)
             return ReceiptClassification(**data)
@@ -201,14 +199,7 @@ class ReceiptProcessor:
             response = llm.call(system_prompt, user_prompt)
             
             # Clean response
-            response = response.strip()
-            if response.startswith("```json"):
-                response = response[7:]
-            if response.startswith("```"):
-                response = response[3:]
-            if response.endswith("```"):
-                response = response[:-3]
-            response = response.strip()
+            response = self._clean_llm_response(response)
             
             data = json.loads(response)
             return data
@@ -219,6 +210,42 @@ class ReceiptProcessor:
                 "subject": "Заявление на возмещение расходов",
                 "body": f"Прошу рассмотреть возможность возмещения расходов.\n\nОшибка генерации: {str(e)}"
             }
+    
+    def _clean_llm_response(self, response: str) -> str:
+        """
+        Clean LLM response from various wrappers (markdown, tags, etc).
+        
+        Args:
+            response: Raw LLM response
+            
+        Returns:
+            Cleaned JSON string
+        """
+        response = response.strip()
+        
+        # Remove Mistral-specific tags
+        if "<s>" in response:
+            response = response.replace("<s>", "")
+        if "</s>" in response:
+            response = response.replace("</s>", "")
+        if "[BOT]" in response:
+            response = response.replace("[BOT]", "")
+        if "[/BOT]" in response:
+            response = response.replace("[/BOT]", "")
+        if "[INST]" in response:
+            response = response.replace("[INST]", "")
+        if "[/INST]" in response:
+            response = response.replace("[/INST]", "")
+        
+        # Remove markdown code blocks
+        if response.startswith("```json"):
+            response = response[7:]
+        if response.startswith("```"):
+            response = response[3:]
+        if response.endswith("```"):
+            response = response[:-3]
+        
+        return response.strip()
     
     def _load_prompt(self, prompt_name: str) -> str:
         """Load prompt from prompts directory."""

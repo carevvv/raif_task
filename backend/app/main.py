@@ -155,21 +155,26 @@ def process_receipt(receipt_id: int, file_path: str, db: Session):
         crud.update_receipt_classification(db, receipt_id, classification_dict)
         logger.info("Classification completed", receipt_id=receipt_id)
         
-        # Step 4: Generate embeddings
-        embedding_service = get_embedding_service()
-        receipt = crud.get_receipt(db, receipt_id)
-        
-        embedding_text = embedding_service.generate_text_for_embedding({
-            "vendor": receipt.vendor,
-            "category": receipt.category,
-            "llm_summary": receipt.llm_summary,
-            "raw_text": receipt.raw_text
-        })
-        
-        embedding_vector = embedding_service.generate_embedding(embedding_text)
-        embedding_bytes = embedding_service.serialize_embedding(embedding_vector)
-        crud.update_receipt_embedding(db, receipt_id, embedding_bytes)
-        logger.info("Embedding generated", receipt_id=receipt_id)
+        # Step 4: Generate embeddings (optional - for semantic search)
+        try:
+            embedding_service = get_embedding_service()
+            receipt = crud.get_receipt(db, receipt_id)
+            
+            embedding_text = embedding_service.generate_text_for_embedding({
+                "vendor": receipt.vendor,
+                "category": receipt.category,
+                "llm_summary": receipt.llm_summary,
+                "raw_text": receipt.raw_text
+            })
+            
+            embedding_vector = embedding_service.generate_embedding(embedding_text)
+            embedding_bytes = embedding_service.serialize_embedding(embedding_vector)
+            crud.update_receipt_embedding(db, receipt_id, embedding_bytes)
+            logger.info("Embedding generated", receipt_id=receipt_id)
+        except Exception as e:
+            # Embedding is optional - don't fail the whole process
+            logger.warning("Embedding generation failed, continuing anyway", 
+                         receipt_id=receipt_id, error=str(e))
         
         # Mark as processed
         crud.mark_receipt_processed(db, receipt_id, success=True)

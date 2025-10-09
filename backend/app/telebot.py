@@ -14,10 +14,34 @@ logger = structlog.get_logger()
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /start command."""
     user = update.effective_user
+    
+    # Create keyboard with two buttons
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                text="📱 Открыть Checko",
+                web_app=WebAppInfo(url=settings.WEBAPP_URL)
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="💬 Написать в поддержку",
+                url="https://t.me/carevvv"
+            )
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
     await update.message.reply_text(
         f"Привет, {user.first_name}! 👋\n\n"
         f"Я помогу тебе обрабатывать чеки и документы.\n\n"
-        f"Используй /open чтобы открыть приложение.",
+        f"📸 Загружай фото чеков и получай:\n"
+        f"✅ Распознанный текст (OCR)\n"
+        f"✅ Структурированные данные\n"
+        f"✅ Категорию расходов\n"
+        f"✅ Проверку налогового вычета\n\n"
+        f"Нажми кнопку ниже, чтобы начать!",
+        reply_markup=reply_markup
     )
 
 
@@ -67,17 +91,33 @@ def run_bot():
     
     logger.info("Starting Telegram bot", webapp_url=settings.WEBAPP_URL)
     
-    # Create application
-    application = Application.builder().token(settings.TELEGRAM_BOT_TOKEN).build()
+    # Create application with increased timeouts
+    application = (
+        Application.builder()
+        .token(settings.TELEGRAM_BOT_TOKEN)
+        .connect_timeout(30.0)
+        .read_timeout(30.0)
+        .write_timeout(30.0)
+        .pool_timeout(30.0)
+        .build()
+    )
     
     # Add command handlers
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("open", open_command))
     application.add_handler(CommandHandler("help", help_command))
     
-    # Run the bot
+    # Run the bot with retry logic
     logger.info("Telegram bot is running")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    try:
+        application.run_polling(
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True,
+            close_loop=False
+        )
+    except Exception as e:
+        logger.error("Bot polling error", error=str(e))
+        raise
 
 
 if __name__ == "__main__":

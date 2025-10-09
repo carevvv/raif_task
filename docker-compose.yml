@@ -16,7 +16,7 @@ services:
       - SECRET_TOKEN=${SECRET_TOKEN:-change-me-in-production}
     volumes:
       - ./backend/uploads:/app/uploads
-      - ./backend/checko.db:/app/checko.db
+      - checko-db:/app
     restart: unless-stopped
 
   frontend:
@@ -33,5 +33,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  uploads:
-  database:
+  checko-db:

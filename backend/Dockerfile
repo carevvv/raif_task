@@ -18,8 +18,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 COPY prompts/ ./prompts/
 
-# Create uploads directory
-RUN mkdir -p uploads
+# Create necessary directories with proper permissions
+RUN mkdir -p uploads && \
+    chmod 777 uploads && \
+    touch checko.db && \
+    chmod 666 checko.db
 
 # Expose port
 EXPOSE 8000
