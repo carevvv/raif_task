@@ -120,21 +120,9 @@ docker-compose -f docker-compose.prod.yml up -d --build
 sudo apt install certbot python3-certbot-nginx -y
 sudo certbot --nginx -d yourdomain.com
 
-# ✅ Готово! Бот автоматически запустится в контейнере
+# ✅ Готово Бот автоматически запустится в контейнере
 ```
 
-### Проверка работы:
-
-```bash
-# Проверить статус контейнеров
-docker-compose -f docker-compose.prod.yml ps
-
-# Посмотреть логи
-docker-compose -f docker-compose.prod.yml logs -f
-
-# Перезапустить сервисы
-docker-compose -f docker-compose.prod.yml restart
-```
 
 ## Переменные окружения
 
@@ -146,41 +134,6 @@ OPENROUTER_MODEL=mistralai/mistral-7b-instruct
 SECRET_TOKEN=...                # Случайная строка
 ```
 
-## 🛠️ Troubleshooting
-
-### Общие проблемы:
-
-**OCR не распознает русский текст:**
-- ✅ Уже исправлено! Используется Tesseract с режимом `--psm 3 --oem 1`
-- Поддерживает русский и английский одновременно (`rus+eng`)
-
-**Чек "зависает" в обработке:**
-- ✅ Исправлено! Embedding теперь опционален
-- Основная обработка (OCR + LLM) всегда завершается
-
-**Mini App не открывается:**
-- Проверь, что `WEBAPP_URL` в `.env` использует HTTPS
-- Для локального тестирования обязателен ngrok
-
-### Полезные команды:
-
-```bash
-# Посмотреть логи
-docker-compose logs backend -f
-docker-compose logs frontend -f
-
-# Перезапустить сервисы
-docker-compose restart backend
-docker-compose restart frontend
-
-# Полная очистка (удалит все данные!)
-docker-compose down -v
-docker-compose up --build -d
-
-# Остановить все процессы
-docker-compose down
-Get-Process python,ngrok -ErrorAction SilentlyContinue | Stop-Process -Force
-```
 
 ## 🔧 Технологии
 
@@ -203,16 +156,5 @@ Get-Process python,ngrok -ErrorAction SilentlyContinue | Stop-Process -Force
 - **Nginx** - production web-сервер
 - **Certbot** - автоматический SSL
 
-## 📝 Что нового
 
-**v1.0.0 - Основной функционал:**
-- ✅ Улучшенное распознавание русского текста (OCR PSM 3)
-- ✅ Уведомления при загрузке чеков в Mini App
-- ✅ Кнопки в /start (открыть Mini App + поддержка)
-- ✅ Опциональный embedding (не блокирует обработку)
-- ✅ Haptic feedback для Telegram
-- ✅ Поддержка AVIF формата изображений
-
-## 📄 Лицензия
-
-MIT License - используйте свободно!
+## 📄 Лицензия - MIT License
