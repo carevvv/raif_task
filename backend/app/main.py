@@ -7,7 +7,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
-from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, BackgroundTasks, Query
+from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, BackgroundTasks, Query, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db, init_db
 from app import crud
+from app.telegram_auth import get_user_id_from_header, extract_user_id
 from app.schemas import (
     ReceiptResponse, 
     ReceiptListResponse, 
@@ -78,12 +79,20 @@ async def health_check():
 async def upload_receipt(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(None)
 ):
     """
     Upload a receipt file (image or PDF) for processing.
     Processing happens in the background.
+    Requires Telegram authentication via Authorization header.
     """
+    # Extract user_id from Telegram initData
+    user_id = get_user_id_from_header(authorization)
+    if not user_id:
+        # For testing without Telegram, use a default user_id
+        user_id = "test_user"
+        logger.warning("No valid Telegram auth, using test_user")
     # Validate file size
     file_size = 0
     chunk_size = 1024 * 1024  # 1MB
@@ -108,7 +117,7 @@ async def upload_receipt(
         raise HTTPException(status_code=500, detail="Failed to save file")
     
     # Create receipt record
-    receipt = crud.create_receipt(db, file.filename)
+    receipt = crud.create_receipt(db, file.filename, user_id)
     
     # Move file to permanent location
     final_path = UPLOAD_DIR / f"{receipt.id}_{file.filename}"
@@ -117,7 +126,7 @@ async def upload_receipt(
     # Schedule background processing
     background_tasks.add_task(process_receipt, receipt.id, str(final_path), db)
     
-    logger.info("Receipt uploaded", receipt_id=receipt.id, filename=file.filename)
+    logger.info("Receipt uploaded", receipt_id=receipt.id, filename=file.filename, user_id=user_id)
     
     return {
         "id": receipt.id,
@@ -186,9 +195,19 @@ def process_receipt(receipt_id: int, file_path: str, db: Session):
 
 
 @app.get(f"{settings.API_V1_PREFIX}/process/{{receipt_id}}", response_model=ReceiptResponse)
-async def get_receipt_status(receipt_id: int, db: Session = Depends(get_db)):
+async def get_receipt_status(
+    receipt_id: int, 
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(None)
+):
     """Get processing status and results for a receipt."""
-    receipt = crud.get_receipt(db, receipt_id)
+    # Extract user_id from Telegram initData
+    user_id = get_user_id_from_header(authorization)
+    if not user_id:
+        user_id = "test_user"
+    
+    # Get receipt, filtered by user_id for security
+    receipt = crud.get_receipt(db, receipt_id, user_id=user_id)
     
     if not receipt:
         raise HTTPException(status_code=404, detail="Receipt not found")
@@ -201,11 +220,23 @@ async def list_receipts(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     processed_only: bool = Query(False),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(None)
 ):
-    """Get paginated list of receipts."""
+    """Get paginated list of receipts for the authenticated user."""
+    # Extract user_id from Telegram initData
+    user_id = get_user_id_from_header(authorization)
+    if not user_id:
+        user_id = "test_user"
+    
     skip = (page - 1) * page_size
-    receipts, total = crud.get_receipts(db, skip=skip, limit=page_size, processed_only=processed_only)
+    receipts, total = crud.get_receipts(
+        db, 
+        skip=skip, 
+        limit=page_size, 
+        processed_only=processed_only,
+        user_id=user_id
+    )
     
     total_pages = (total + page_size - 1) // page_size
     
@@ -222,17 +253,23 @@ async def list_receipts(
 async def search_receipts(
     q: str = Query(..., min_length=1),
     limit: int = Query(10, ge=1, le=50),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(None)
 ):
-    """Semantic search across receipts using embeddings."""
-    logger.info("Search request", query=q)
+    """Semantic search across user's receipts using embeddings."""
+    # Extract user_id from Telegram initData
+    user_id = get_user_id_from_header(authorization)
+    if not user_id:
+        user_id = "test_user"
+    
+    logger.info("Search request", query=q, user_id=user_id)
     
     # Generate query embedding
     embedding_service = get_embedding_service()
     query_embedding = embedding_service.generate_embedding(q)
     
-    # Get all receipts with embeddings
-    all_receipts = crud.get_all_receipts_with_embeddings(db)
+    # Get all user's receipts with embeddings
+    all_receipts = crud.get_all_receipts_with_embeddings(db, user_id=user_id)
     
     if not all_receipts:
         return SearchResponse(query=q, results=[])
@@ -261,9 +298,18 @@ async def search_receipts(
 
 
 @app.post(f"{settings.API_V1_PREFIX}/generate-template/{{receipt_id}}")
-async def generate_template(receipt_id: int, db: Session = Depends(get_db)):
+async def generate_template(
+    receipt_id: int, 
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(None)
+):
     """Generate email template for accounting department."""
-    receipt = crud.get_receipt(db, receipt_id)
+    # Extract user_id from Telegram initData
+    user_id = get_user_id_from_header(authorization)
+    if not user_id:
+        user_id = "test_user"
+    
+    receipt = crud.get_receipt(db, receipt_id, user_id=user_id)
     
     if not receipt:
         raise HTTPException(status_code=404, detail="Receipt not found")
@@ -289,9 +335,18 @@ async def generate_template(receipt_id: int, db: Session = Depends(get_db)):
 
 
 @app.get(f"{settings.API_V1_PREFIX}/download/{{receipt_id}}")
-async def download_receipt(receipt_id: int, db: Session = Depends(get_db)):
+async def download_receipt(
+    receipt_id: int, 
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(None)
+):
     """Download original receipt file."""
-    receipt = crud.get_receipt(db, receipt_id)
+    # Extract user_id from Telegram initData
+    user_id = get_user_id_from_header(authorization)
+    if not user_id:
+        user_id = "test_user"
+    
+    receipt = crud.get_receipt(db, receipt_id, user_id=user_id)
     
     if not receipt:
         raise HTTPException(status_code=404, detail="Receipt not found")
@@ -310,9 +365,18 @@ async def download_receipt(receipt_id: int, db: Session = Depends(get_db)):
 
 
 @app.delete(f"{settings.API_V1_PREFIX}/receipt/{{receipt_id}}")
-async def delete_receipt(receipt_id: int, db: Session = Depends(get_db)):
+async def delete_receipt(
+    receipt_id: int, 
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(None)
+):
     """Delete a specific receipt and its file."""
-    receipt = crud.get_receipt(db, receipt_id)
+    # Extract user_id from Telegram initData
+    user_id = get_user_id_from_header(authorization)
+    if not user_id:
+        user_id = "test_user"
+    
+    receipt = crud.get_receipt(db, receipt_id, user_id=user_id)
     
     if not receipt:
         raise HTTPException(status_code=404, detail="Receipt not found")

@@ -2,6 +2,14 @@ import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
+// Get Telegram initData for authentication
+const getTelegramInitData = (): string | null => {
+  if (window.Telegram?.WebApp?.initData) {
+    return window.Telegram.WebApp.initData
+  }
+  return null
+}
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -9,9 +17,19 @@ const api = axios.create({
   },
 })
 
+// Add interceptor to include Telegram auth in every request
+api.interceptors.request.use((config) => {
+  const initData = getTelegramInitData()
+  if (initData) {
+    config.headers['Authorization'] = `tma ${initData}`
+  }
+  return config
+})
+
 // Types
 export interface Receipt {
   id: number
+  user_id: string
   filename: string
   upload_ts: string
   raw_text?: string

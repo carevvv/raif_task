@@ -17,6 +17,9 @@ class Receipt(Base):
     # Primary key
     id = Column(Integer, primary_key=True, index=True)
     
+    # User identification (Telegram user ID)
+    user_id = Column(String(50), nullable=False, index=True)
+    
     # File metadata
     filename = Column(String(255), nullable=False)
     upload_ts = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
@@ -57,6 +60,8 @@ class Receipt(Base):
 
 
 # Create indexes
+Index("idx_receipts_user_id", Receipt.user_id)
 Index("idx_receipts_upload_ts", Receipt.upload_ts)
 Index("idx_receipts_vendor", Receipt.vendor)
 Index("idx_receipts_processed", Receipt.processed)
+Index("idx_receipts_user_processed", Receipt.user_id, Receipt.processed)

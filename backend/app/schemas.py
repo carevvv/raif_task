@@ -36,6 +36,7 @@ class TemplateGeneration(BaseModel):
 class ReceiptResponse(BaseModel):
     """Schema for receipt API response."""
     id: int
+    user_id: str
     filename: str
     upload_ts: datetime
     raw_text: Optional[str] = None

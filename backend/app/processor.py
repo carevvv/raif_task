@@ -51,7 +51,7 @@ class ReceiptProcessor:
         try:
             if file_ext in ['.pdf']:
                 return self._extract_from_pdf(file_path)
-            elif file_ext in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp']:
+            elif file_ext in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp', '.heic', '.heif', '.avif']:
                 return self._extract_from_image(file_path)
             else:
                 raise ValueError(f"Unsupported file format: {file_ext}")

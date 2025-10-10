@@ -10,32 +10,40 @@ import structlog
 logger = structlog.get_logger()
 
 
-def create_receipt(db: Session, filename: str) -> Receipt:
+def create_receipt(db: Session, filename: str, user_id: str) -> Receipt:
     """Create a new receipt record."""
-    receipt = Receipt(filename=filename, processed=False)
+    receipt = Receipt(filename=filename, user_id=user_id, processed=False)
     db.add(receipt)
     db.commit()
     db.refresh(receipt)
-    logger.info("Receipt created", receipt_id=receipt.id, filename=filename)
+    logger.info("Receipt created", receipt_id=receipt.id, filename=filename, user_id=user_id)
     return receipt
 
 
-def get_receipt(db: Session, receipt_id: int) -> Optional[Receipt]:
-    """Get receipt by ID."""
-    return db.query(Receipt).filter(Receipt.id == receipt_id).first()
+def get_receipt(db: Session, receipt_id: int, user_id: Optional[str] = None) -> Optional[Receipt]:
+    """Get receipt by ID, optionally filtered by user_id."""
+    query = db.query(Receipt).filter(Receipt.id == receipt_id)
+    if user_id:
+        query = query.filter(Receipt.user_id == user_id)
+    return query.first()
 
 
 def get_receipts(
     db: Session, 
     skip: int = 0, 
     limit: int = 20,
-    processed_only: bool = False
+    processed_only: bool = False,
+    user_id: Optional[str] = None
 ) -> tuple[List[Receipt], int]:
     """
-    Get paginated list of receipts.
+    Get paginated list of receipts, optionally filtered by user_id.
     Returns (receipts, total_count).
     """
     query = db.query(Receipt)
+    
+    # Filter by user_id if provided
+    if user_id:
+        query = query.filter(Receipt.user_id == user_id)
     
     if processed_only:
         query = query.filter(Receipt.processed == True)
@@ -141,21 +149,37 @@ def delete_all_receipts(db: Session) -> int:
     return count
 
 
-def get_all_receipts_with_embeddings(db: Session) -> List[Receipt]:
-    """Get all receipts that have embeddings for search."""
-    return db.query(Receipt).filter(
+def get_all_receipts_with_embeddings(db: Session, user_id: Optional[str] = None) -> List[Receipt]:
+    """Get all receipts that have embeddings for search, optionally filtered by user_id."""
+    query = db.query(Receipt).filter(
         Receipt.embedding.isnot(None),
         Receipt.processed == True
-    ).all()
+    )
+    
+    if user_id:
+        query = query.filter(Receipt.user_id == user_id)
+    
+    return query.all()
 
 
-def search_receipts_by_text(db: Session, query: str, limit: int = 10) -> List[Receipt]:
+def search_receipts_by_text(
+    db: Session, 
+    query: str, 
+    limit: int = 10,
+    user_id: Optional[str] = None
+) -> List[Receipt]:
     """Simple text-based search in vendor, raw_text, and category."""
     search_pattern = f"%{query}%"
-    return db.query(Receipt).filter(
+    db_query = db.query(Receipt).filter(
         or_(
             Receipt.vendor.ilike(search_pattern),
             Receipt.raw_text.ilike(search_pattern),
             Receipt.category.ilike(search_pattern)
         )
-    ).limit(limit).all()
+    )
+    
+    # Filter by user_id if provided
+    if user_id:
+        db_query = db_query.filter(Receipt.user_id == user_id)
+    
+    return db_query.limit(limit).all()

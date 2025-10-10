@@ -12,9 +12,23 @@ export function Upload() {
 
   const handleFile = (selectedFile: File) => {
     // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf', 'image/webp']
-    if (!validTypes.includes(selectedFile.type)) {
-      setError('Неподдерживаемый формат файла. Используйте JPG, PNG, PDF или WebP.')
+    const validTypes = [
+      'image/jpeg', 
+      'image/png', 
+      'image/jpg', 
+      'application/pdf', 
+      'image/webp',
+      'image/heic',
+      'image/heif',
+      'image/avif'
+    ]
+    
+    // HEIC files might have empty or application/octet-stream type
+    const fileExt = selectedFile.name.split('.').pop()?.toLowerCase()
+    const isValidExt = ['jpg', 'jpeg', 'png', 'pdf', 'webp', 'heic', 'heif', 'avif'].includes(fileExt || '')
+    
+    if (!validTypes.includes(selectedFile.type) && !isValidExt) {
+      setError('Неподдерживаемый формат файла. Используйте JPG, PNG, PDF, WebP, HEIC или AVIF.')
       return
     }
 
@@ -143,7 +157,7 @@ export function Upload() {
                 или перетащите сюда
               </div>
               <p className="text-xs text-gray-500">
-                PNG, JPG, PDF до 10MB
+                PNG, JPG, PDF, HEIC, AVIF до 10MB
               </p>
             </div>
           ) : (
