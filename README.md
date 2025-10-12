@@ -2,7 +2,7 @@
 
 Telegram Mini App для автоматического распознавания и обработки чеков.
 
-## ✨ Возможности
+## Возможности
 
 - 📸 **Распознавание чеков** - Tesseract OCR с поддержкой русского и английского языков
 - 🖼️ **Поддержка форматов** - JPG, PNG, PDF, WebP, HEIC, HEIF, AVIF
@@ -13,52 +13,13 @@ Telegram Mini App для автоматического распознавани
 - 📱 **Telegram Mini App** - Удобный интерфейс прямо в мессенджере
 - 🔒 **Приватность** - Каждый пользователь видит только свои чеки
 
-## 🚀 Быстрый старт
-
-### Требования:
-- Docker и Docker Compose
-- Telegram Bot Token ([получить у @BotFather](https://t.me/BotFather))
-- OpenRouter API Key ([получить](https://openrouter.ai/keys))
-- ngrok для локального тестирования ([скачать](https://ngrok.com/download))
-
-### Локальный запуск (для тестирования):
-
-```bash
-# 1. Клонировать проект
-git clone <your-repo>
-cd raif_task
-
-# 2. Создать .env файл
-cp .env.example .env
-
-# 3. Заполнить .env:
-TELEGRAM_BOT_TOKEN=your_bot_token_here
-OPENROUTER_API_KEY=your_openrouter_key_here
-WEBAPP_URL=https://your-ngrok-url.ngrok-free.app  # Обновим позже
-
-# 4. Запустить Docker
-docker-compose up -d
-
-# 5. Запустить ngrok (в отдельном терминале)
-ngrok http 3000
-
-# 6. Скопировать HTTPS URL из ngrok и обновить в .env:
-WEBAPP_URL=https://abc-123-xyz.ngrok-free.app
-
-# 7. Перезапустить backend
-docker-compose restart backend
-
-# 8. Запустить бота (в отдельном терминале)
-cd backend
-python -m app.telebot
-```
 
 ### Использование:
 
 1. Открыть Telegram и найти своего бота
 2. Отправить `/start` - появятся кнопки:
-   - 📱 **Открыть Checko** - запустить Mini App
-   - 💬 **Написать в поддержку** - связаться с разработчиком
+   - **Открыть Checko** - запустить Mini App
+   - **Написать в поддержку** - связаться с разработчиком
 3. Загрузить фото чека
 4. Получить уведомление об успешной загрузке
 5. Дождаться обработки (~30 секунд)
@@ -87,7 +48,7 @@ raif_task/
 
 Документация: http://localhost:8000/docs
 
-## 🌐 Production Deploy
+##  Production Deploy
 
 ### Подготовка:
 1. **VPS сервер** - Ubuntu 22.04, минимум 2GB RAM
@@ -109,7 +70,7 @@ cd raif_task
 cp .env.example .env
 nano .env
 
-# Важно! WEBAPP_URL должен быть вашим доменом:
+# WEBAPP_URL должен быть вашим доменом:
 TELEGRAM_BOT_TOKEN=...
 OPENROUTER_API_KEY=...
 WEBAPP_URL=https://yourdomain.com
@@ -140,23 +101,23 @@ SECRET_TOKEN=...                # Случайная строка
 ## 🔧 Технологии
 
 ### Backend:
-- **Python 3.11** + **FastAPI** - быстрый и современный API
-- **Tesseract OCR** - распознавание текста (режим PSM 3, OEM 1 для русского)
-- **OpenRouter API** - LLM обработка (Mistral 7B по умолчанию)
-- **sentence-transformers** - локальные embeddings (опционально)
-- **SQLite** - простая и надежная БД
-- **python-telegram-bot** - интеграция с Telegram
+- **Python 3.11** + **FastAPI**
+- **Tesseract OCR**
+- **OpenRouter API**
+- **sentence-transformers** 
+- **SQLite** 
+- **python-telegram-bot**
 
 ### Frontend:
-- **React 18** + **TypeScript** - типобезопасный UI
-- **Vite** - быстрая сборка
-- **Tailwind CSS** - современные стили
-- **Telegram WebApp API** - нативная интеграция с Mini App
+- **React 18** + **TypeScript**
+- **Vite**
+- **Tailwind CSS** 
+- **Telegram WebApp API** 
 
 ### DevOps:
-- **Docker** + **Docker Compose** - контейнеризация
-- **Nginx** - production web-сервер
-- **Certbot** - автоматический SSL
+- **Docker** + **Docker Compose**
+- **Nginx** 
+- **Certbot**
 
 
 ## 📄 Лицензия - MIT License
