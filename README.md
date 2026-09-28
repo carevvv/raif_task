@@ -1,123 +1,99 @@
-# 🧾 Checko - Обработка чеков с AI
+# Checko
 
-Telegram Mini App для автоматического распознавания и обработки чеков.
+Checko is a Telegram Mini App for automated receipt processing. It recognizes receipts with OCR, uses a large language model to extract and categorize expenses, and checks whether each expense qualifies for a tax deduction.
 
-## Возможности
+## Features
 
-- 📸 **Распознавание чеков** - Tesseract OCR с поддержкой русского и английского языков
-- 🖼️ **Поддержка форматов** - JPG, PNG, PDF, WebP, HEIC, HEIF, AVIF
-- 🤖 **AI обработка** - Автоматическое извлечение данных через OpenRouter API
-- 📊 **Категоризация расходов** - Классификация чеков по типам
-- 💰 **Налоговые вычеты** - Проверка возможности получения вычета
-- ✉️ **Генерация писем** - Готовые шаблоны для бухгалтерии
-- 📱 **Telegram Mini App** - Удобный интерфейс прямо в мессенджере
-- 🔒 **Приватность** - Каждый пользователь видит только свои чеки
+- **Receipt recognition.** Tesseract OCR with Russian and English language support.
+- **Input formats.** JPG, PNG, PDF, WebP, HEIC, HEIF, AVIF.
+- **Structured data extraction.** Receipt fields are extracted by an LLM through the OpenRouter API.
+- **Expense categorization.** Each receipt is classified by expense type.
+- **Tax deduction check.** Flags expenses that may be eligible for a tax deduction.
+- **Document generation.** Produces ready-to-send letter templates for accounting.
+- **Semantic search.** Search over a user's receipts using sentence-transformers embeddings.
+- **Per-user isolation.** Each user has access only to their own receipts.
 
+## Usage
 
-### Использование:
+1. Open the bot in Telegram and send `/start`.
+2. Choose **Open Checko** to launch the Mini App (or **Contact support**).
+3. Upload a photo or file of a receipt.
+4. Processing takes about 30 seconds; results appear in the app once it is complete.
 
-1. Открыть Telegram и найти своего бота
-2. Отправить `/start` - появятся кнопки:
-   - **Открыть Checko** - запустить Mini App
-   - **Написать в поддержку** - связаться с разработчиком
-3. Загрузить фото чека
-4. Получить уведомление об успешной загрузке
-5. Дождаться обработки (~30 секунд)
-6. Посмотреть результаты
-
-## Структура
+## Project structure
 
 ```
 raif_task/
-├── backend/          # Python/FastAPI
-│   ├── app/          # Код приложения
-│   └── prompts/      # Промпты для AI
-├── frontend/         # React/Vite/Tailwind
-│   └── src/          # Исходный код
-├── deploy/           # Конфиги для production
+├── backend/          # Python / FastAPI
+│   ├── app/          # Application code
+│   └── prompts/      # LLM prompts
+├── frontend/         # React / Vite / Tailwind CSS
+│   └── src/
+├── deploy/           # Production configuration
 └── docker-compose.yml
 ```
 
 ## API
 
-- `POST /api/upload` - Загрузить чек (требует Telegram auth)
-- `GET /api/list` - Список чеков пользователя
-- `GET /api/search?q=...` - Поиск по чекам пользователя
-- `GET /api/process/{id}` - Статус обработки
-- `POST /api/generate-template/{id}` - Сгенерировать письмо
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| `POST` | `/api/upload` | Upload a receipt (requires Telegram authentication) |
+| `GET`  | `/api/list` | List the current user's receipts |
+| `GET`  | `/api/search?q=...` | Search the current user's receipts |
+| `GET`  | `/api/process/{id}` | Get processing status |
+| `POST` | `/api/generate-template/{id}` | Generate a letter template |
 
-Документация: http://localhost:8000/docs
+Interactive API documentation is available at `http://localhost:8000/docs` when the backend is running.
 
-##  Production Deploy
+## Configuration
 
-### Подготовка:
-1. **VPS сервер** - Ubuntu 22.04, минимум 2GB RAM
-2. **Домен** - для HTTPS (требуется для Mini App)
-3. **DNS настройка** - A-запись домена на IP сервера
+Copy `.env.example` to `.env` and set the following variables:
 
-### Деплой на VPS:
+```env
+TELEGRAM_BOT_TOKEN=...                      # Issued by @BotFather
+WEBAPP_URL=https://yourdomain.com           # Public HTTPS URL of the Mini App
+OPENROUTER_API_KEY=...                      # From openrouter.ai
+OPENROUTER_MODEL=mistralai/mistral-7b-instruct
+SECRET_TOKEN=...                            # Random string
+```
+
+## Running locally
 
 ```bash
-# 1. На сервере установить Docker
+cp .env.example .env    # then fill in the values
+docker-compose up --build
+```
+
+## Production deployment
+
+Requirements: a VPS running Ubuntu 22.04 with at least 2 GB of RAM, and a domain with an A record pointing to the server. HTTPS is required for Telegram Mini Apps.
+
+```bash
+# Install Docker
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 
-# 2. Клонировать проект
-git clone <your-repo>
+# Clone and configure
+git clone https://github.com/carevvv/raif_task.git
 cd raif_task
+cp .env.example .env    # set WEBAPP_URL to your domain
 
-# 3. Настроить .env для продакшена
-cp .env.example .env
-nano .env
-
-# WEBAPP_URL должен быть вашим доменом:
-TELEGRAM_BOT_TOKEN=...
-OPENROUTER_API_KEY=...
-WEBAPP_URL=https://yourdomain.com
-SECRET_TOKEN=... # Случайная строка для безопасности
-
-# 4. Запустить в production режиме
+# Start the services
 docker-compose -f docker-compose.prod.yml up -d --build
 
-# 5. Настроить SSL с Certbot
+# Issue a TLS certificate
 sudo apt install certbot python3-certbot-nginx -y
 sudo certbot --nginx -d yourdomain.com
-
-# ✅ Готово Бот автоматически запустится в контейнере
 ```
 
+The bot starts automatically inside its container.
 
-## Переменные окружения
+## Tech stack
 
-```env
-TELEGRAM_BOT_TOKEN=...          # От @BotFather
-WEBAPP_URL=https://yourdomain.com
-OPENROUTER_API_KEY=...          # От openrouter.ai
-OPENROUTER_MODEL=mistralai/mistral-7b-instruct
-SECRET_TOKEN=...                # Случайная строка
-```
+- **Backend:** Python 3.11, FastAPI, Tesseract OCR, OpenRouter API, sentence-transformers, SQLite, python-telegram-bot
+- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Telegram WebApp API
+- **Infrastructure:** Docker, Docker Compose, Nginx, Certbot
 
+## License
 
-## 🔧 Технологии
-
-### Backend:
-- **Python 3.11** + **FastAPI**
-- **Tesseract OCR**
-- **OpenRouter API**
-- **sentence-transformers** 
-- **SQLite** 
-- **python-telegram-bot**
-
-### Frontend:
-- **React 18** + **TypeScript**
-- **Vite**
-- **Tailwind CSS** 
-- **Telegram WebApp API** 
-
-### DevOps:
-- **Docker** + **Docker Compose**
-- **Nginx** 
-- **Certbot**
-
-
-## 📄 Лицензия - MIT License
+Released under the [MIT License](LICENSE).
